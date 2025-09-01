@@ -195,9 +195,9 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
     <div className="relative">
       {/* Attached Files */}
       {attachedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-t-2xl border border-border/30 mb-0">
+        <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-t-2xl border border-border/30 mb-0 animate-slide-in-up">
           {attachedFiles.map((file, index) => (
-            <div key={index} className="flex items-center gap-2 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-xl text-xs sm:text-sm border border-border/30 shadow-sm">
+            <div key={index} className="flex items-center gap-2 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-xl text-xs sm:text-sm border border-border/30 shadow-sm animate-bounce-in transition-all duration-200 hover:scale-105">
               {getFileIcon(file)}
               <span className="truncate max-w-32 sm:max-w-40 text-foreground font-medium">{file.name}</span>
               <button
@@ -321,9 +321,9 @@ export const EnhancedChatInput = ({ onSendMessage, disabled }: EnhancedChatInput
 
       {/* Voice Status */}
       {isListening && (
-        <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-fade-in border border-blue-400/30 backdrop-blur-sm">
+        <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-medium shadow-lg animate-bounce-in border border-blue-400/30 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-white rounded-full animate-status-indicator"></div>
             Listening... Speak now or click to stop
           </div>
         </div>

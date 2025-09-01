@@ -33,31 +33,6 @@ interface EnhancedChatContainerProps {
   onChatUpdate?: (chatId: string, title: string, messageCount: number) => void;
 }
 
-const MODEL_CATEGORIES = {
-  'Text Generation': [
-    { id: 'gpt-5-chat-latest', name: 'GPT-5 Latest', provider: 'OpenAI', status: 'live' },
-    { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', status: 'live' },
-    { id: 'o1', name: 'o1', provider: 'OpenAI', status: 'live' },
-    { id: 'o1-pro', name: 'o1 Pro', provider: 'OpenAI', status: 'live' },
-    { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', status: 'live' },
-    { id: 'claude-opus-4', name: 'Claude Opus 4', provider: 'Anthropic', status: 'live' },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', status: 'live' },
-    { id: 'deepseek-reasoner', name: 'DeepSeek R1', provider: 'DeepSeek', status: 'live' },
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google', status: 'live' },
-    { id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', name: 'Llama 3.1 70B', provider: 'Meta', status: 'live' },
-    { id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Llama 3.1 405B', provider: 'Meta', status: 'live' },
-    { id: 'mistral-large-latest', name: 'Mistral Large', provider: 'Mistral', status: 'live' }
-  ],
-  'Image Generation': [
-    { id: 'dall-e-3', name: 'DALL-E 3', provider: 'OpenAI', status: 'live' }
-  ],
-  'Code Generation': [
-    { id: 'gpt-4o', name: 'GPT-4o (Code)', provider: 'OpenAI', status: 'live' },
-    { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet (Code)', provider: 'Anthropic', status: 'live' },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat (Code)', provider: 'DeepSeek', status: 'live' }
-  ]
-};
-
 export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek-chat', onChatUpdate }: EnhancedChatContainerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +46,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
   useEffect(() => {
     setCurrentModel(selectedModel);
   }, [selectedModel]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -162,7 +138,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
     try {
       const response = await puterService.chat(userMessage.content, {
         model: currentModel,
-        max_tokens: 2000,
+        max_tokens: 1500, // Optimized for faster responses
         temperature: 0.7,
         memory: true
       }, sessionId);
@@ -220,7 +196,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
     try {
       const response = await puterService.chat(userMessage.content, {
         model: currentModel,
-        max_tokens: 2000,
+        max_tokens: 1500,
         temperature: 0.7,
         memory: true
       }, sessionId);
@@ -264,100 +240,13 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
     });
   };
 
-  const getModelBadgeColor = (status: string) => {
-    switch (status) {
-      case 'live': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'beta': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'error': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-    }
-  };
-
-  // Mount models menu in the designated container
-  useEffect(() => {
-    const container = document.getElementById('models-menu-container');
-    if (container) {
-      const modelSelect = (
-        <Select value={currentModel} onValueChange={setCurrentModel}>
-          <SelectTrigger className="w-full bg-[#020105]/80 border-[#FFFAFA]/20 text-[#FFFAFA] hover:bg-[#FFFAFA]/10">
-            <SelectValue placeholder="Select AI Model" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/30 backdrop-blur-md">
-            {Object.entries(MODEL_CATEGORIES).map(([category, models]) => (
-              <div key={category}>
-                <div className="px-2 py-1.5 text-xs font-semibold text-[#FFFAFA]/60 uppercase tracking-wider">
-                  {category}
-                </div>
-                {models.map((model) => (
-                  <SelectItem 
-                    key={model.id} 
-                    value={model.id}
-                    className="text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:bg-[#FFFAFA]/10"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{model.name}</span>
-                        <span className="text-xs text-[#FFFAFA]/60">{model.provider}</span>
-                      </div>
-                      <Badge className={`ml-2 text-xs ${getModelBadgeColor(model.status)}`}>
-                        {model.status}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </div>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-      
-      // This would need to be rendered using a portal or similar React mechanism
-      // For now, we'll handle it in the Layout component
-    }
-  });
-
   return (
     <div className="flex flex-col h-screen bg-[#020105]">
-      {/* Models Menu - Now handled by Layout component */}
-      <div className="hidden">
-        <Select value={currentModel} onValueChange={setCurrentModel}>
-          <SelectTrigger className="w-64 bg-[#020105]/80 border-[#FFFAFA]/30 text-[#FFFAFA] backdrop-blur-sm">
-            <SelectValue placeholder="Select AI Model" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#020105]/95 border-[#FFFAFA]/30">
-            {Object.entries(MODEL_CATEGORIES).map(([category, models]) => (
-              <div key={category}>
-                <div className="px-2 py-1.5 text-xs font-semibold text-[#FFFAFA]/60 uppercase tracking-wider">
-                  {category}
-                </div>
-                {models.map((model) => (
-                  <SelectItem 
-                    key={model.id} 
-                    value={model.id}
-                    className="text-[#FFFAFA] hover:bg-[#FFFAFA]/10 focus:bg-[#FFFAFA]/10"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{model.name}</span>
-                        <span className="text-xs text-[#FFFAFA]/60">{model.provider}</span>
-                      </div>
-                      <Badge className={`ml-2 text-xs ${getModelBadgeColor(model.status)}`}>
-                        {model.status}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </div>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Chat Messages Area */}
-      <ScrollArea className="flex-1 px-4 pt-4 pb-4">
+      <ScrollArea className="flex-1 px-4 pt-20 pb-4"> {/* Added top padding for model menu */}
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 animate-fade-in">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 mb-4">
                 <Sparkles className="w-8 h-8 text-purple-400" />
               </div>
@@ -370,7 +259,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10"
+                  className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10 transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   onClick={() => handleSendMessage("Explain quantum computing in simple terms")}
                 >
                   <MessageSquare className="w-4 h-4 mr-3 text-blue-400" />
@@ -381,7 +270,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10"
+                  className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10 transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   onClick={() => handleSendMessage("Write a Python function to sort a list")}
                 >
                   <Bot className="w-4 h-4 mr-3 text-green-400" />
@@ -392,7 +281,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10"
+                  className="justify-start text-left h-auto p-4 bg-[#020105]/50 border-[#FFFAFA]/30 hover:bg-[#FFFAFA]/10 transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   onClick={() => handleSendMessage("Help me plan a trip to Japan")}
                 >
                   <MessageSquare className="w-4 h-4 mr-3 text-orange-400" />
@@ -403,7 +292,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto p-4 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-400/30 hover:bg-purple-500/20"
+                  className="justify-start text-left h-auto p-4 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-400/30 hover:bg-purple-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   onClick={() => window.location.href = 'https://cosmic-image.vercel.app'}
                 >
                   <Palette className="w-4 h-4 mr-3 text-purple-400" />
@@ -416,7 +305,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
             </div>
           ) : (
             messages.map((message, index) => (
-              <div key={message.id}>
+              <div key={message.id} className="animate-slide-up">
                 <ChatMessage
                   message={message.content}
                   isUser={message.sender === 'user'}
@@ -429,7 +318,7 @@ export function EnhancedChatContainer({ currentChatId, selectedModel = 'deepseek
             ))
           )}
           
-          {isLoading && <TypingIndicator />}
+          {isLoading && <div className="animate-fade-in"><TypingIndicator /></div>}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
