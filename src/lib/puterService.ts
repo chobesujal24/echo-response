@@ -51,7 +51,7 @@ export class PuterService {
       capabilities: ['text', 'vision', 'reasoning', 'code']
     },
     { 
-      id: 'gpt-4o-mini', 
+      id: 'gpt-4o-mini',
       name: 'GPT-4o Mini', 
       provider: 'OpenAI', 
       category: 'Fast',
@@ -106,6 +106,17 @@ export class PuterService {
       capabilities: ['reasoning', 'math', 'science', 'code']
     },
     { 
+      id: 'o1-mini', 
+      name: 'o1 Mini', 
+      provider: 'OpenAI', 
+      category: 'Reasoning',
+      status: 'live', 
+      description: 'Compact reasoning model for faster problem-solving',
+      maxTokens: 4000,
+      costTier: 'medium',
+      capabilities: ['reasoning', 'math', 'code']
+    },
+    { 
       id: 'o1-pro', 
       name: 'o1 Pro', 
       provider: 'OpenAI', 
@@ -115,17 +126,6 @@ export class PuterService {
       maxTokens: 8000,
       costTier: 'high',
       capabilities: ['reasoning', 'math', 'science', 'code', 'research']
-    },
-    { 
-      id: 'gpt-5-chat-latest', 
-      name: 'GPT-5 Chat', 
-      provider: 'OpenAI', 
-      category: 'Next-Gen',
-      status: 'beta', 
-      description: 'Next-generation conversational AI (Preview)',
-      maxTokens: 8000,
-      costTier: 'high',
-      capabilities: ['text', 'vision', 'reasoning', 'code', 'multimodal']
     },
 
     // Anthropic Models
@@ -139,6 +139,17 @@ export class PuterService {
       maxTokens: 4000,
       costTier: 'medium',
       capabilities: ['text', 'reasoning', 'writing', 'analysis']
+    },
+    { 
+      id: 'claude-3-5-haiku', 
+      name: 'Claude 3.5 Haiku', 
+      provider: 'Anthropic', 
+      category: 'Fast',
+      status: 'live', 
+      description: 'Fastest Claude model with enhanced capabilities',
+      maxTokens: 2000,
+      costTier: 'low',
+      capabilities: ['text', 'writing', 'code']
     },
     { 
       id: 'claude-3-opus', 
@@ -172,17 +183,6 @@ export class PuterService {
       maxTokens: 2000,
       costTier: 'low',
       capabilities: ['text', 'writing']
-    },
-    { 
-      id: 'claude-opus-4', 
-      name: 'Claude Opus 4', 
-      provider: 'Anthropic', 
-      category: 'Next-Gen',
-      status: 'beta', 
-      description: 'Next-generation Claude with enhanced capabilities',
-      maxTokens: 8000,
-      costTier: 'high',
-      capabilities: ['text', 'reasoning', 'writing', 'analysis', 'research', 'multimodal']
     },
 
     // DeepSeek Models
@@ -246,7 +246,7 @@ export class PuterService {
 
     // Meta Models
     { 
-      id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', 
+      id: 'llama-3.1-405b',
       name: 'Llama 3.1 405B', 
       provider: 'Meta', 
       category: 'Advanced',
@@ -257,7 +257,7 @@ export class PuterService {
       capabilities: ['text', 'reasoning', 'code', 'multilingual']
     },
     { 
-      id: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 
+      id: 'llama-3.1-70b',
       name: 'Llama 3.1 70B', 
       provider: 'Meta', 
       category: 'Advanced',
@@ -268,7 +268,7 @@ export class PuterService {
       capabilities: ['text', 'reasoning', 'code']
     },
     { 
-      id: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', 
+      id: 'llama-3.1-8b',
       name: 'Llama 3.1 8B', 
       provider: 'Meta', 
       category: 'Fast',
@@ -303,7 +303,7 @@ export class PuterService {
 
     // Mistral Models
     { 
-      id: 'mistral-large-latest', 
+      id: 'mistral-large',
       name: 'Mistral Large', 
       provider: 'Mistral', 
       category: 'Advanced',
@@ -314,18 +314,7 @@ export class PuterService {
       capabilities: ['text', 'reasoning', 'code', 'multilingual']
     },
     { 
-      id: 'pixtral-large-latest', 
-      name: 'Pixtral Large', 
-      provider: 'Mistral', 
-      category: 'Vision',
-      status: 'live', 
-      description: 'Multimodal model with vision capabilities',
-      maxTokens: 4000,
-      costTier: 'medium',
-      capabilities: ['text', 'vision', 'multimodal']
-    },
-    { 
-      id: 'codestral-latest', 
+      id: 'codestral',
       name: 'Codestral', 
       provider: 'Mistral', 
       category: 'Code',
@@ -522,13 +511,14 @@ export class PuterService {
   async quickTest(model: string): Promise<string> {
     try {
       // Use minimal test for speed
-      const response = await Promise.race([
+      const response = await Promise.race<any>([
         (window as any).puter.ai.chat('Hi', {
           model: model,
           max_tokens: 5,
-          temperature: 0.1
+          temperature: 0.1,
+          stream: false
         }),
-        new Promise((_, reject) => 
+        new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Test timeout')), 5000)
         )
       ]);
@@ -655,7 +645,7 @@ export class PuterService {
       max_tokens: 1000, // Reduced for faster responses
       temperature: 0.7,
       memory: true,
-      stream: false,
+      stream: true,
       ...options
     };
     
@@ -678,23 +668,24 @@ export class PuterService {
       let response;
       
       // Optimized API call with shorter timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout after 10 seconds')), 10000);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout after 15 seconds')), 15000);
       });
       
       const apiCall = async () => {
+        const chatOptions = {
+          model: puterModel,
+          max_tokens: defaultOptions.max_tokens,
+          temperature: defaultOptions.temperature,
+          stream: defaultOptions.stream
+        };
+
         if (conversationMessages.length > 1) {
-          return await (window as any).puter.ai.chat(conversationMessages, {
-            model: puterModel,
-            max_tokens: defaultOptions.max_tokens,
-            temperature: defaultOptions.temperature
-          });
+          const response = await (window as any).puter.ai.chat(conversationMessages, chatOptions);
+          return defaultOptions.stream ? await this.handleStreamResponse(response) : response;
         } else {
-          return await (window as any).puter.ai.chat(message, {
-            model: puterModel,
-            max_tokens: defaultOptions.max_tokens,
-            temperature: defaultOptions.temperature
-          });
+          const response = await (window as any).puter.ai.chat(message, chatOptions);
+          return defaultOptions.stream ? await this.handleStreamResponse(response) : response;
         }
       };
       
@@ -730,6 +721,36 @@ export class PuterService {
     }
   }
 
+  private async handleStreamResponse(response: any): Promise<string> {
+    try {
+      // Check if response is an async iterable (stream)
+      if (response && typeof response[Symbol.asyncIterator] === 'function') {
+        let fullResponse = '';
+        
+        for await (const chunk of response) {
+          if (typeof chunk === 'string') {
+            fullResponse += chunk;
+          } else if (chunk && typeof chunk === 'object') {
+            // Handle different chunk formats
+            const chunkText = chunk.content || chunk.text || chunk.message || chunk.delta?.content || '';
+            if (typeof chunkText === 'string') {
+              fullResponse += chunkText;
+            }
+          }
+        }
+        
+        return fullResponse.trim();
+      }
+      
+      // If not a stream, return as regular response
+      return this.extractResponseText(response);
+    } catch (error) {
+      console.error('Stream handling error:', error);
+      // Fallback to regular response extraction
+      return this.extractResponseText(response);
+    }
+  }
+
   private updateModelMetrics(modelId: string, responseTime: number, success: boolean) {
     const model = this.availableModels.get(modelId);
     if (model) {
@@ -759,7 +780,7 @@ export class PuterService {
       console.log('🖼️ Processing image with Puter AI');
       const startTime = Date.now();
       
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Image processing timeout after 15 seconds')), 15000);
       });
       
@@ -768,7 +789,7 @@ export class PuterService {
           prompt || 'Describe this image in detail',
           imageUrl,
           false,
-          { model: 'gpt-4o', max_tokens: 600 }
+          { model: 'gpt-4o', max_tokens: 600, stream: false }
         );
       };
       
@@ -810,7 +831,7 @@ export class PuterService {
       
       const testMode = options.testMode !== undefined ? options.testMode : false;
       
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Image generation timeout after 25 seconds')), 25000);
       });
       
@@ -973,7 +994,7 @@ Please try again in a moment when the connection is restored.`;
   getRecommendedModel(task: 'chat' | 'code' | 'reasoning' | 'fast' | 'vision'): string {
     const recommendations = {
       chat: 'deepseek-chat',
-      code: 'codestral-latest',
+      code: 'codestral',
       reasoning: 'deepseek-reasoner',
       fast: 'gpt-4o-mini',
       vision: 'gpt-4o'
