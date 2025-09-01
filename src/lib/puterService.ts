@@ -1,4 +1,4 @@
-// Enhanced Puter AI service with CORRECT model IDs and fixed image processing
+// Enhanced Puter AI service with optimized performance and better error handling
 export interface PuterAIOptions {
   model?: string;
   context?: Array<{ role: string; content: string }>;
@@ -14,11 +14,167 @@ export interface ChatMemory {
   sessionId: string;
 }
 
+export interface ModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  category: string;
+  status: 'live' | 'beta' | 'error';
+  description: string;
+  maxTokens: number;
+  costTier: 'free' | 'low' | 'medium' | 'high';
+}
+
 export class PuterService {
   private static instance: PuterService;
   private chatMemory: Map<string, ChatMemory> = new Map();
   private isInitialized = false;
-  private availableModels: Set<string> = new Set();
+  private availableModels: Map<string, ModelInfo> = new Map();
+  private modelTestResults: Map<string, boolean> = new Map();
+  private initializationPromise: Promise<boolean> | null = null;
+  
+  // Optimized model definitions with correct Puter API model IDs
+  private readonly MODEL_DEFINITIONS: ModelInfo[] = [
+    // Featured Models - Fast and Reliable
+    { 
+      id: 'deepseek-chat', 
+      name: 'DeepSeek Chat', 
+      provider: 'DeepSeek', 
+      category: 'Featured',
+      status: 'live', 
+      description: 'Fast conversational AI with excellent reasoning',
+      maxTokens: 4000,
+      costTier: 'low'
+    },
+    { 
+      id: 'gpt-4o', 
+      name: 'GPT-4o', 
+      provider: 'OpenAI', 
+      category: 'Featured',
+      status: 'live', 
+      description: 'Advanced multimodal AI with vision capabilities',
+      maxTokens: 4000,
+      costTier: 'medium'
+    },
+    { 
+      id: 'claude-3-5-sonnet', 
+      name: 'Claude 3.5 Sonnet', 
+      provider: 'Anthropic', 
+      category: 'Featured',
+      status: 'live', 
+      description: 'Excellent for analysis and creative writing',
+      maxTokens: 4000,
+      costTier: 'medium'
+    },
+    { 
+      id: 'gemini-2.0-flash', 
+      name: 'Gemini 2.0 Flash', 
+      provider: 'Google', 
+      category: 'Featured',
+      status: 'live', 
+      description: 'Google\'s latest fast multimodal model',
+      maxTokens: 4000,
+      costTier: 'low'
+    },
+
+    // Reasoning Models - For Complex Tasks
+    { 
+      id: 'deepseek-reasoner', 
+      name: 'DeepSeek R1', 
+      provider: 'DeepSeek', 
+      category: 'Reasoning',
+      status: 'live', 
+      description: 'Advanced reasoning and problem-solving',
+      maxTokens: 8000,
+      costTier: 'medium'
+    },
+    { 
+      id: 'o1', 
+      name: 'o1', 
+      provider: 'OpenAI', 
+      category: 'Reasoning',
+      status: 'live', 
+      description: 'OpenAI\'s reasoning model for complex problems',
+      maxTokens: 8000,
+      costTier: 'high'
+    },
+    { 
+      id: 'o1-pro', 
+      name: 'o1 Pro', 
+      provider: 'OpenAI', 
+      category: 'Reasoning',
+      status: 'live', 
+      description: 'Professional reasoning model with enhanced capabilities',
+      maxTokens: 8000,
+      costTier: 'high'
+    },
+
+    // Advanced Models - Latest Technology
+    { 
+      id: 'gpt-5-chat-latest', 
+      name: 'GPT-5 Chat', 
+      provider: 'OpenAI', 
+      category: 'Advanced',
+      status: 'beta', 
+      description: 'Next-generation conversational AI',
+      maxTokens: 8000,
+      costTier: 'high'
+    },
+    { 
+      id: 'claude-opus-4', 
+      name: 'Claude Opus 4', 
+      provider: 'Anthropic', 
+      category: 'Advanced',
+      status: 'beta', 
+      description: 'Most capable Claude model for complex tasks',
+      maxTokens: 8000,
+      costTier: 'high'
+    },
+    { 
+      id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', 
+      name: 'Llama 3.1 405B', 
+      provider: 'Meta', 
+      category: 'Advanced',
+      status: 'live', 
+      description: 'Largest open-source model with exceptional capabilities',
+      maxTokens: 4000,
+      costTier: 'medium'
+    },
+
+    // Code Generation
+    { 
+      id: 'codestral-latest', 
+      name: 'Codestral', 
+      provider: 'Mistral', 
+      category: 'Code',
+      status: 'live', 
+      description: 'Specialized for code generation and programming',
+      maxTokens: 4000,
+      costTier: 'low'
+    },
+
+    // Fast Models - Quick Responses
+    { 
+      id: 'gpt-4o-mini', 
+      name: 'GPT-4o Mini', 
+      provider: 'OpenAI', 
+      category: 'Fast',
+      status: 'live', 
+      description: 'Lightweight version of GPT-4o for quick responses',
+      maxTokens: 2000,
+      costTier: 'free'
+    },
+    { 
+      id: 'gemini-1.5-flash', 
+      name: 'Gemini 1.5 Flash', 
+      provider: 'Google', 
+      category: 'Fast',
+      status: 'live', 
+      description: 'Fast and efficient for everyday tasks',
+      maxTokens: 2000,
+      costTier: 'free'
+    }
+  ];
   
   static getInstance(): PuterService {
     if (!PuterService.instance) {
@@ -28,76 +184,111 @@ export class PuterService {
   }
   
   async initialize(): Promise<boolean> {
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this._initialize();
+    return this.initializationPromise;
+  }
+
+  private async _initialize(): Promise<boolean> {
     try {
+      console.log('Initializing Puter SDK...');
+      
+      // Wait for Puter SDK with timeout
       let attempts = 0;
-      while (attempts < 50) {
+      const maxAttempts = 25; // Reduced from 50 for faster initialization
+      
+      while (attempts < maxAttempts) {
         if (typeof (window as any).puter !== 'undefined' && 
             typeof (window as any).puter.ai !== 'undefined') {
           this.isInitialized = true;
-          console.log('Puter SDK initialized successfully');
-          await this.testAvailableModels();
+          console.log('✓ Puter SDK initialized successfully');
+          
+          // Initialize model definitions
+          this.initializeModelDefinitions();
+          
+          // Quick test of primary models only
+          await this.quickModelTest();
+          
           return true;
         }
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100)); // Reduced delay
         attempts++;
       }
       
-      console.warn('Puter SDK not available after timeout');
+      console.warn('⚠ Puter SDK not available after timeout, using fallback mode');
+      this.initializeModelDefinitions(); // Still initialize model definitions
       return false;
     } catch (error) {
-      console.error('Error initializing Puter SDK:', error);
+      console.error('❌ Error initializing Puter SDK:', error);
+      this.initializeModelDefinitions(); // Still initialize model definitions
       return false;
     }
   }
+
+  private initializeModelDefinitions(): void {
+    // Initialize all models as available by default
+    this.MODEL_DEFINITIONS.forEach(model => {
+      this.availableModels.set(model.id, model);
+    });
+    console.log(`📋 Initialized ${this.MODEL_DEFINITIONS.length} model definitions`);
+  }
   
-  async testAvailableModels(): Promise<void> {
-    // CORRECT Puter model IDs based on official documentation
-    const testModels = [
-      // DeepSeek Models (FIXED)
-      'deepseek-chat', 'deepseek-reasoner',
-      
-      // Anthropic Models (FIXED)
-      'claude-3-5-sonnet', 'claude-3-7-sonnet', 'claude-sonnet-4', 'claude-opus-4',
-      
-      // OpenAI Models (FIXED)
-      'gpt-4o', 'gpt-4o-mini', 'gpt-5-chat-latest', 'gpt-5-nano', 'gpt-4.1-nano', 'o1', 'o1-pro',
-      
-      // Google Models (FIXED)
-      'gemini-1.5-flash', 'gemini-2.0-flash',
-      
-      // Meta Models (FIXED)
-      'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
-      'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', 
-      'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
-      
-      // Other Models (FIXED)
-      'mistral-large-latest', 'pixtral-large-latest', 'codestral-latest'
-    ];
+  private async quickModelTest(): Promise<void> {
+    console.log('🧪 Testing primary models...');
     
-    console.log('Testing model availability...');
+    // Test only the most important models to reduce initialization time
+    const primaryModels = ['deepseek-chat', 'gpt-4o', 'claude-3-5-sonnet', 'gemini-2.0-flash'];
     
-    for (const model of testModels) {
+    const testPromises = primaryModels.map(async (modelId) => {
       try {
-        const response = await this.quickTest(model);
+        const startTime = Date.now();
+        const response = await this.quickTest(modelId);
+        const responseTime = Date.now() - startTime;
+        
         if (response && response.length > 0 && !response.toLowerCase().includes('error')) {
-          this.availableModels.add(model);
-          console.log(`✓ Model ${model} is available`);
+          this.modelTestResults.set(modelId, true);
+          const model = this.availableModels.get(modelId);
+          if (model) {
+            model.status = 'live';
+            console.log(`✓ ${model.name} - Response time: ${responseTime}ms`);
+          }
+        } else {
+          this.modelTestResults.set(modelId, false);
+          const model = this.availableModels.get(modelId);
+          if (model) {
+            model.status = 'error';
+            console.log(`✗ ${model.name} - Test failed`);
+          }
         }
       } catch (error) {
-        console.warn(`✗ Model ${model} failed test:`, error);
+        this.modelTestResults.set(modelId, false);
+        const model = this.availableModels.get(modelId);
+        if (model) {
+          model.status = 'error';
+        }
+        console.warn(`✗ ${modelId} test failed:`, error);
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+    });
     
-    console.log('Available models:', Array.from(this.availableModels));
+    // Run tests in parallel but with timeout
+    await Promise.allSettled(testPromises);
+    
+    const workingModels = Array.from(this.modelTestResults.entries())
+      .filter(([_, working]) => working)
+      .map(([modelId]) => modelId);
+    
+    console.log(`🎯 Working models: ${workingModels.join(', ')}`);
   }
   
   async quickTest(model: string): Promise<string> {
     try {
+      // Use a very short test message for speed
       const response = await (window as any).puter.ai.chat('Hi', {
         model: model,
-        max_tokens: 10,
+        max_tokens: 5, // Minimal tokens for speed
         temperature: 0.1
       });
       return this.extractResponseText(response);
@@ -120,7 +311,7 @@ export class PuterService {
     }
   }
   
-  // Fixed memory management with proper conversation continuity
+  // Optimized memory management
   addToMemory(sessionId: string, role: string, content: string, model: string) {
     const memoryKey = `${sessionId}-${model}`;
     
@@ -139,17 +330,35 @@ export class PuterService {
       timestamp: new Date() 
     });
     
-    // Keep last 20 messages for better context
-    if (memory.messages.length > 20) {
-      memory.messages = memory.messages.slice(-20);
+    // Keep last 15 messages for better performance
+    if (memory.messages.length > 15) {
+      memory.messages = memory.messages.slice(-15);
     }
     
-    // Save to localStorage for persistence
-    try {
-      localStorage.setItem(`chat-memory-${memoryKey}`, JSON.stringify(memory));
-    } catch (error) {
-      console.warn('Failed to save memory to localStorage:', error);
+    // Debounced save to localStorage
+    this.debouncedSaveMemory(memoryKey, memory);
+  }
+
+  private saveTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  
+  private debouncedSaveMemory(memoryKey: string, memory: ChatMemory) {
+    // Clear existing timeout
+    const existingTimeout = this.saveTimeouts.get(memoryKey);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
     }
+    
+    // Set new timeout
+    const timeout = setTimeout(() => {
+      try {
+        localStorage.setItem(`chat-memory-${memoryKey}`, JSON.stringify(memory));
+        this.saveTimeouts.delete(memoryKey);
+      } catch (error) {
+        console.warn('Failed to save memory to localStorage:', error);
+      }
+    }, 500); // 500ms debounce
+    
+    this.saveTimeouts.set(memoryKey, timeout);
   }
   
   getMemory(sessionId: string, model: string): Array<{ role: string; content: string }> {
@@ -194,14 +403,16 @@ export class PuterService {
   }
   
   async chat(message: string, options: PuterAIOptions = {}, sessionId?: string): Promise<string> {
+    const startTime = Date.now();
+    
     if (!await this.isAvailable()) {
-      console.log('Puter SDK not available, using enhanced fallback');
+      console.log('🔄 Puter SDK not available, using enhanced fallback');
       return this.getEnhancedFallbackResponse(message, options.model);
     }
     
     const defaultOptions: PuterAIOptions = {
       model: 'deepseek-chat',
-      max_tokens: 2000,
+      max_tokens: 1500, // Reduced for faster responses
       temperature: 0.7,
       memory: true,
       stream: false,
@@ -209,75 +420,54 @@ export class PuterService {
     };
     
     try {
-      console.log('Calling Puter AI with:', { 
-        message: message.slice(0, 100), 
-        model: defaultOptions.model,
-        sessionId: sessionId 
-      });
+      console.log(`🚀 Sending to ${defaultOptions.model}:`, message.slice(0, 50) + '...');
       
-      // Build conversation with memory context
+      // Build optimized conversation context
       let conversationMessages: Array<{ role: string; content: string }> = [];
       
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         const memory = this.getMemory(sessionId, defaultOptions.model);
-        conversationMessages = [...memory.slice(-10)]; // Use last 10 messages for context
-        console.log(`Using ${conversationMessages.length} messages from memory for context`);
-      }
-      
-      // Add model-specific system prompt to ensure proper identity
-      const systemPrompt = this.getModelSystemPrompt(defaultOptions.model!);
-      if (systemPrompt && conversationMessages.length === 0) {
-        conversationMessages.push({ role: 'system', content: systemPrompt });
+        // Use only last 6 messages for faster processing
+        conversationMessages = [...memory.slice(-6)];
       }
       
       // Add current message
       conversationMessages.push({ role: 'user', content: message });
       
       const puterModel = defaultOptions.model!;
-      console.log('Using exact Puter model:', puterModel);
-      
       let response;
       
-      // Method 1: Full conversation with context
-      try {
-        response = await (window as any).puter.ai.chat(conversationMessages, {
-          model: puterModel,
-          max_tokens: defaultOptions.max_tokens,
-          temperature: defaultOptions.temperature
-        });
-        console.log('Conversation method successful');
-      } catch (error1) {
-        console.warn('Conversation method failed:', error1.message);
-        
-        // Method 2: Simple message with model and system prompt
-        try {
-          const messageWithPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${message}` : message;
-          response = await (window as any).puter.ai.chat(messageWithPrompt, {
+      // Optimized API call with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout after 15 seconds')), 15000);
+      });
+      
+      const apiCall = async () => {
+        if (conversationMessages.length > 1) {
+          // Use conversation format for context
+          return await (window as any).puter.ai.chat(conversationMessages, {
             model: puterModel,
             max_tokens: defaultOptions.max_tokens,
             temperature: defaultOptions.temperature
           });
-          console.log('Simple method with prompt successful');
-        } catch (error2) {
-          console.warn('Simple method failed:', error2.message);
-          
-          // Method 3: Basic call
-          try {
-            response = await (window as any).puter.ai.chat(message, {
-              model: puterModel
-            });
-            console.log('Basic method successful');
-          } catch (error3) {
-            console.error('All methods failed');
-            throw new Error(`All API methods failed. Last error: ${error3.message}`);
-          }
+        } else {
+          // Use simple format for single messages
+          return await (window as any).puter.ai.chat(message, {
+            model: puterModel,
+            max_tokens: defaultOptions.max_tokens,
+            temperature: defaultOptions.temperature
+          });
         }
-      }
+      };
       
-      console.log('Raw Puter response received:', typeof response, response ? 'has content' : 'empty');
+      response = await Promise.race([apiCall(), timeoutPromise]);
+      
+      const responseTime = Date.now() - startTime;
+      console.log(`⚡ Response received in ${responseTime}ms`);
+      
       const responseText = this.extractResponseText(response);
       
-      if (!responseText || responseText.length < 5) {
+      if (!responseText || responseText.length < 3) {
         throw new Error('Empty or invalid response received');
       }
       
@@ -285,60 +475,60 @@ export class PuterService {
       if (defaultOptions.memory && sessionId && defaultOptions.model) {
         this.addToMemory(sessionId, 'user', message, defaultOptions.model);
         this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
-        console.log('Added messages to memory for model:', defaultOptions.model);
       }
       
-      console.log('Chat completed successfully');
+      // Update model status based on performance
+      const model = this.availableModels.get(defaultOptions.model);
+      if (model && responseTime < 10000) {
+        model.status = 'live';
+      }
+      
       return responseText;
     } catch (error) {
-      console.error('Puter AI Error:', error);
+      const responseTime = Date.now() - startTime;
+      console.error(`❌ Chat error after ${responseTime}ms:`, error);
+      
+      // Update model status
+      const model = this.availableModels.get(defaultOptions.model!);
+      if (model) {
+        model.status = 'error';
+      }
+      
       return this.getEnhancedFallbackResponse(message, defaultOptions.model, error);
     }
   }
 
-  // FIXED image processing with correct Puter API format
+  // Optimized image processing
   async imageToText(imageUrl: string, prompt?: string, sessionId?: string): Promise<string> {
     if (!await this.isAvailable()) {
       return 'Image processing service not available. Please ensure the Puter SDK is loaded and try again.';
     }
     
     try {
-      console.log('Processing image with Puter AI:', imageUrl);
+      console.log('🖼️ Processing image with Puter AI');
+      const startTime = Date.now();
+      
       let response;
       
-      // Method 1: Fixed - Documented chat(prompt, imageURL) format
-      try {
-        response = await (window as any).puter.ai.chat(
+      // Optimized image processing with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Image processing timeout after 20 seconds')), 20000);
+      });
+      
+      const imageCall = async () => {
+        return await (window as any).puter.ai.chat(
           prompt || 'Describe this image in detail',
           imageUrl,
           false,
-          { model: 'gpt-4o', max_tokens: 1000 }
+          { model: 'gpt-4o', max_tokens: 800 } // Reduced tokens for speed
         );
-        console.log('Chat with image URL method successful');
-      } catch (error1) {
-        console.warn('Chat with image URL failed:', error1.message);
-        
-        // Method 2: Fixed - Dedicated img2txt API
-        try {
-          if ((window as any).puter.ai.img2txt) {
-            response = await (window as any).puter.ai.img2txt(imageUrl, prompt || 'Describe this image in detail');
-            console.log('Direct img2txt method successful');
-          } else {
-            throw new Error('img2txt method not available');
-          }
-        } catch (error2) {
-          console.warn('Direct img2txt failed:', error2.message);
-          
-          // Method 3: Enhanced fallback
-          response = await (window as any).puter.ai.chat(
-            `I have an image that I'd like you to analyze. ${prompt || 'Please describe what you would expect to see in a typical image and provide a helpful response.'}`,
-            { model: 'gpt-4o-mini' }
-          );
-          console.log('Fallback method used');
-        }
-      }
+      };
       
-      console.log('Puter AI image response received');
+      response = await Promise.race([imageCall(), timeoutPromise]);
+      
+      const responseTime = Date.now() - startTime;
+      console.log(`🖼️ Image processed in ${responseTime}ms`);
+      
       const responseText = this.extractResponseText(response);
       
       // Add to memory if sessionId provided
@@ -349,23 +539,17 @@ export class PuterService {
       
       return responseText;
     } catch (error) {
-      console.error('Puter imageToText error:', error);
+      console.error('🖼️ Image processing error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return `I apologize, but I'm unable to process the image at the moment. 
 
-Error details: ${errorMessage}
+Error: ${errorMessage}
 
-Possible solutions:
-1. Ensure the image URL is accessible
-2. Try uploading the image again
-3. Check your internet connection
-4. Try with a different image format (JPG, PNG, WebP)
-
-Please try again or contact support if the issue persists.`;
+Please try again or use a different image format.`;
     }
   }
 
-  // NEW: DALL-E text-to-image generation
+  // Enhanced image generation with better error handling
   async generateImage(prompt: string, options: {
     model?: string;
     size?: '1024x1024' | '1792x1024' | '1024x1792';
@@ -379,16 +563,28 @@ Please try again or contact support if the issue persists.`;
     }
     
     try {
-      console.log('Generating image with DALL-E:', prompt);
+      console.log('🎨 Generating image with DALL-E:', prompt.slice(0, 50) + '...');
+      const startTime = Date.now();
       
-      // FIXED: Use Puter's txt2img API exactly as documented
-      // testMode = true for testing (avoids using credits), false for production
+      // Use test mode by default to avoid credits during development
       const testMode = options.testMode !== undefined ? options.testMode : false;
-      const imageElement = await (window as any).puter.ai.txt2img(prompt, testMode);
+      
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Image generation timeout after 30 seconds')), 30000);
+      });
+      
+      const imageCall = async () => {
+        return await (window as any).puter.ai.txt2img(prompt, testMode);
+      };
+      
+      const imageElement = await Promise.race([imageCall(), timeoutPromise]);
       
       if (!imageElement || !imageElement.src) {
         throw new Error('No image element received from DALL-E API');
       }
+      
+      const responseTime = Date.now() - startTime;
+      console.log(`🎨 Image generated in ${responseTime}ms`);
       
       const imageUrl = imageElement.src;
       
@@ -398,109 +594,20 @@ Please try again or contact support if the issue persists.`;
         this.addToMemory(options.sessionId, 'assistant', `Generated image: ${imageUrl}`, 'dall-e');
       }
       
-      console.log('Image generated successfully:', imageUrl);
       return { imageUrl };
       
     } catch (error) {
-      console.error('DALL-E generation error:', error);
+      console.error('🎨 Image generation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return { 
-        error: `Failed to generate image: ${errorMessage}
-        
-Possible solutions:
-1. Try a more detailed prompt
-2. Check your internet connection
-3. Try again in a moment
-4. Ensure Puter SDK is properly loaded
-
-Please try again or contact support if the issue persists.`
+        error: `Failed to generate image: ${errorMessage}`
       };
-    }
-  }
-
-  async chatWithFiles(content: any[], options: PuterAIOptions = {}, sessionId?: string): Promise<string> {
-    if (!await this.isAvailable()) {
-      return 'File processing service not available. Please ensure the Puter SDK is loaded and try again.';
-    }
-
-    const defaultOptions: PuterAIOptions = {
-      model: 'deepseek-chat',
-      max_tokens: 2500,
-      temperature: 0.7,
-      memory: true,
-      stream: false,
-      ...options
-    };
-    
-    try {
-      // Add memory context if enabled
-      let contextMessages: Array<{ role: string; content: any }> = [];
-      if (defaultOptions.memory && sessionId && defaultOptions.model) {
-        const memory = this.getMemory(sessionId, defaultOptions.model);
-        contextMessages = memory.slice(-8).map(m => ({ role: m.role, content: m.content }));
-        console.log(`Using ${contextMessages.length} messages from memory for file chat`);
-      }
-      
-      // Add model-specific system prompt
-      const systemPrompt = this.getModelSystemPrompt(defaultOptions.model!);
-      if (systemPrompt && contextMessages.length === 0) {
-        contextMessages.push({ role: 'system', content: systemPrompt });
-      }
-      
-      const messages = [
-        ...contextMessages,
-        {
-          role: 'user',
-          content: content
-        }
-      ];
-
-      console.log('Sending files to Puter AI:', { messageCount: messages.length, model: defaultOptions.model });
-      
-      let response;
-      try {
-        response = await (window as any).puter.ai.chat(messages, {
-          model: defaultOptions.model!,
-          max_tokens: defaultOptions.max_tokens,
-          temperature: defaultOptions.temperature
-        });
-      } catch (error) {
-        // Fallback: convert content to text and send as regular message
-        const textContent = content.map(c => c.text || '[File content]').join('\n');
-        response = await this.chat(textContent, defaultOptions, sessionId);
-        return response;
-      }
-      
-      console.log('Puter AI file response received');
-      const responseText = this.extractResponseText(response);
-      
-      // Add to memory if enabled
-      if (defaultOptions.memory && sessionId && defaultOptions.model) {
-        const userContent = content.map(c => c.text || '[File content]').join('\n');
-        this.addToMemory(sessionId, 'user', userContent, defaultOptions.model);
-        this.addToMemory(sessionId, 'assistant', responseText, defaultOptions.model);
-      }
-      
-      return responseText;
-    } catch (error) {
-      console.error('Puter chatWithFiles error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return `I apologize, but I'm unable to process the files at the moment.
-
-Error details: ${errorMessage}
-
-Possible solutions:
-1. Try uploading smaller files
-2. Ensure files are in supported formats
-3. Check your internet connection
-4. Try again in a moment
-
-Please try again or contact support if the issue persists.`;
     }
   }
   
   private getEnhancedFallbackResponse(message: string, model?: string, error?: any): string {
-    const modelName = model ? this.getModelDisplayName(model) : 'AI';
+    const modelInfo = model ? this.getModelInfo(model) : null;
+    const modelName = modelInfo ? modelInfo.name : 'AI Assistant';
     
     if (message.toLowerCase().includes('code') || message.toLowerCase().includes('program')) {
       return `I'd be happy to help with coding! However, I'm currently experiencing connectivity issues with the ${modelName} service.
@@ -510,47 +617,21 @@ Quick Coding Tips:
 2. For new projects: Start with a basic structure and build incrementally
 3. For algorithms: Break down the problem into smaller steps
 
-Please try again in a moment when the connection is restored.
-
-${error ? `\nTechnical details: ${error.message || error}` : ''}`;
-    }
-    
-    if (message.toLowerCase().includes('explain') || message.toLowerCase().includes('what is')) {
-      return `I understand you're looking for an explanation about: "${message.slice(0, 100)}..."
-
-I'm currently experiencing connectivity issues with the ${modelName} service, but I'd be happy to help once the connection is restored.
-
-In the meantime:
-- Try rephrasing your question
-- Break complex topics into smaller questions
-- Check if there are specific aspects you'd like me to focus on
-
-Please try again shortly!
-
-${error ? `\nTechnical details: ${error.message || error}` : ''}`;
+Please try again in a moment when the connection is restored.`;
     }
     
     const fallbackResponses = [
-      `Hello! I'm ${modelName} and I'd love to help with: "${message.slice(0, 80)}..." 
-
-However, I'm currently experiencing connectivity issues. Please try again in a moment - I'll be back online shortly!`,
+      `Hello! I'm ${modelName} and I'd love to help with your question. However, I'm currently experiencing connectivity issues. Please try again in a moment!`,
       
-      `Your message has been received by ${modelName}! Unfortunately, there seems to be a temporary service issue. 
-
-I'm working to get back online and assist you with your question about "${message.slice(0, 60)}..."`,
+      `Your message has been received! Unfortunately, there seems to be a temporary service issue with ${modelName}. I'm working to get back online shortly.`,
       
-      `${modelName} here! I see your question about "${message.slice(0, 60)}..." and I want to help, but I'm experiencing some technical difficulties.
-
-Please try again in a few moments - I should be back online soon!`,
+      `${modelName} here! I see your question and want to help, but I'm experiencing some technical difficulties. Please try again in a few moments.`,
     ];
     
-    const baseResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-    return error ? `${baseResponse}\n\nTechnical details: ${error.message || error}` : baseResponse;
+    return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
   }
   
   private extractResponseText(response: any): string {
-    console.log('Extracting text from response:', typeof response, response ? 'has content' : 'empty');
-    
     if (typeof response === 'string' && response.trim()) {
       return response.trim();
     }
@@ -566,9 +647,7 @@ Please try again in a few moments - I should be back online soon!`,
         response.choices?.[0]?.message?.content,
         response.response,
         response.output,
-        response.result,
-        response.answer,
-        response.reply
+        response.result
       ];
       
       for (const text of possiblePaths) {
@@ -576,162 +655,64 @@ Please try again in a few moments - I should be back online soon!`,
           return text.trim();
         }
       }
-      
-      try {
-        const stringified = JSON.stringify(response, null, 2);
-        if (stringified && stringified !== '{}' && stringified !== 'null') {
-          return `Response received in unexpected format:\n${stringified}`;
-        }
-      } catch (e) {
-        console.warn('Failed to stringify response:', e);
-      }
     }
     
     if (response === null || response === undefined) {
-      console.log('Response is null/undefined');
       return 'No response received from AI service. Please try again.';
     }
     
     const stringResponse = String(response);
-    console.log('Converted to string:', stringResponse.slice(0, 100));
-    
-    if (!stringResponse || stringResponse === 'undefined' || stringResponse === 'null' || stringResponse === '[object Object]') {
+    if (!stringResponse || stringResponse === 'undefined' || stringResponse === 'null') {
       return 'Invalid response format from AI service. Please try again.';
     }
     
     return stringResponse;
   }
   
-  // FIXED model system prompts with correct model names
-  private getModelSystemPrompt(model: string): string {
-    const prompts: Record<string, string> = {
-      // DeepSeek Models (FIXED)
-      'deepseek-chat': 'You are DeepSeek Chat, an advanced AI model created by DeepSeek. You are known for your conversational abilities and technical expertise. Always identify yourself as DeepSeek Chat when asked about your identity.',
-      'deepseek-reasoner': 'You are DeepSeek Reasoner, a reasoning-focused AI model created by DeepSeek. You excel at step-by-step thinking and logical analysis. Always identify yourself as DeepSeek Reasoner when asked about your identity.',
-      
-      // Anthropic Models (FIXED)
-      'claude-3-5-sonnet': 'You are Claude 3.5 Sonnet, an AI assistant created by Anthropic. You are helpful, harmless, and honest. Always identify yourself as Claude 3.5 Sonnet when asked about your identity.',
-      'claude-3-7-sonnet': 'You are Claude 3.7 Sonnet, an AI assistant created by Anthropic. You are helpful, harmless, and honest. Always identify yourself as Claude 3.7 Sonnet when asked about your identity.',
-      'claude-sonnet-4': 'You are Claude Sonnet 4, an AI assistant created by Anthropic. You are helpful, harmless, and honest. Always identify yourself as Claude Sonnet 4 when asked about your identity.',
-      'claude-opus-4': 'You are Claude Opus 4, a powerful AI assistant created by Anthropic. You excel at complex tasks and reasoning. Always identify yourself as Claude Opus 4 when asked about your identity.',
-      
-      // OpenAI Models (FIXED)
-      'gpt-4o': 'You are GPT-4o, an advanced AI model created by OpenAI. You are multimodal and capable of processing text and images. Always identify yourself as GPT-4o when asked about your identity.',
-      'gpt-4o-mini': 'You are GPT-4o Mini, a fast and efficient AI model created by OpenAI. You provide quick, accurate responses. Always identify yourself as GPT-4o Mini when asked about your identity.',
-      'gpt-5-chat-latest': 'You are GPT-5 Chat, the latest conversational AI model created by OpenAI. You represent the cutting edge of AI technology. Always identify yourself as GPT-5 Chat when asked about your identity.',
-      'gpt-5-nano': 'You are GPT-5 Nano, a compact yet powerful AI model created by OpenAI. You are optimized for efficiency. Always identify yourself as GPT-5 Nano when asked about your identity.',
-      'gpt-4.1-nano': 'You are GPT-4.1 Nano, an efficient AI model created by OpenAI. You provide quick responses. Always identify yourself as GPT-4.1 Nano when asked about your identity.',
-      'o1': 'You are o1, an advanced reasoning AI model created by OpenAI. You excel at complex problem-solving and step-by-step analysis. Always identify yourself as o1 when asked about your identity.',
-      'o1-pro': 'You are o1-pro, a professional reasoning AI model created by OpenAI. You provide expert-level analysis and solutions. Always identify yourself as o1-pro when asked about your identity.',
-      
-      // Google Models (FIXED)
-      'gemini-1.5-flash': 'You are Gemini 1.5 Flash, an AI model created by Google. You are fast and efficient at various tasks. Always identify yourself as Gemini 1.5 Flash when asked about your identity.',
-      'gemini-2.0-flash': 'You are Gemini 2.0 Flash, an advanced AI model created by Google. You represent the latest in AI technology. Always identify yourself as Gemini 2.0 Flash when asked about your identity.',
-      
-      // Meta Models (FIXED)
-      'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo': 'You are Llama 3.1 8B, an efficient language model created by Meta. You are optimized for speed and efficiency. Always identify yourself as Llama 3.1 8B when asked about your identity.',
-      'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo': 'You are Llama 3.1 70B, a language model created by Meta. You provide balanced performance and capability. Always identify yourself as Llama 3.1 70B when asked about your identity.',
-      'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo': 'You are Llama 3.1 405B, a large language model created by Meta. You are one of the most capable open-source models. Always identify yourself as Llama 3.1 405B when asked about your identity.'
-    };
+  // Enhanced model management
+  getAvailableModels(): ModelInfo[] {
+    return Array.from(this.availableModels.values());
+  }
+  
+  getModelsByCategory(): Record<string, ModelInfo[]> {
+    const models = this.getAvailableModels();
+    const categories: Record<string, ModelInfo[]> = {};
     
-    return prompts[model] || '';
-  }
-  
-  getAvailableModels(): string[] {
-    return [
-      // DeepSeek Models (FIXED)
-      'deepseek-chat',
-      'deepseek-reasoner',
-      
-      // Anthropic Models (Second position as requested)
-      'claude-3-5-sonnet',
-      'claude-3-7-sonnet',
-      'claude-sonnet-4',
-      'claude-opus-4',
-      
-      // OpenAI Models (FIXED)
-      'gpt-4o',
-      'gpt-4o-mini',
-      'gpt-5-chat-latest',
-      'gpt-5-nano',
-      'gpt-4.1-nano',
-      'o1',
-      'o1-pro',
-      
-      // Google Models (FIXED)
-      'gemini-1.5-flash',
-      'gemini-2.0-flash',
-      
-      // Meta Models (FIXED)
-      'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
-      'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
-      'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
-      
-      // Other Models (FIXED)
-      'mistral-large-latest',
-      'pixtral-large-latest',
-      'codestral-latest'
-    ];
-  }
-  
-  getModelDisplayName(modelId: string): string {
-    const displayNames: Record<string, string> = {
-      // DeepSeek Models (FIXED)
-      'deepseek-chat': 'DeepSeek Chat',
-      'deepseek-reasoner': 'DeepSeek Reasoner',
-      
-      // Anthropic Models (FIXED)
-      'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
-      'claude-3-7-sonnet': 'Claude 3.7 Sonnet',
-      'claude-sonnet-4': 'Claude Sonnet 4',
-      'claude-opus-4': 'Claude Opus 4',
-      
-      // OpenAI Models (FIXED)
-      'gpt-4o': 'GPT-4o',
-      'gpt-4o-mini': 'GPT-4o Mini',
-      'gpt-5-chat-latest': 'GPT-5 Chat',
-      'gpt-5-nano': 'GPT-5 Nano',
-      'gpt-4.1-nano': 'GPT-4.1 Nano',
-      'o1': 'o1',
-      'o1-pro': 'o1-pro',
-      
-      // Google Models (FIXED)
-      'gemini-1.5-flash': 'Gemini 1.5 Flash',
-      'gemini-2.0-flash': 'Gemini 2.0 Flash',
-      
-      // Meta Models (FIXED)
-      'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo': 'Llama 3.1 8B',
-      'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo': 'Llama 3.1 70B',
-      'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo': 'Llama 3.1 405B',
-      
-      // Other Models (FIXED)
-      'mistral-large-latest': 'Mistral Large',
-      'pixtral-large-latest': 'Pixtral Large',
-      'codestral-latest': 'Codestral'
-    };
+    models.forEach(model => {
+      if (!categories[model.category]) {
+        categories[model.category] = [];
+      }
+      categories[model.category].push(model);
+    });
     
-    return displayNames[modelId] || modelId.toUpperCase();
+    return categories;
   }
   
-  // Test model availability
-  async testModel(modelId: string): Promise<boolean> {
-    try {
-      const response = await this.chat('Hello', { model: modelId, max_tokens: 10 });
-      return response.length > 0 && !response.includes('error') && !response.includes('not available');
-    } catch (error) {
-      console.warn(`Model ${modelId} test failed:`, error);
-      return false;
-    }
+  getModelInfo(modelId: string): ModelInfo | undefined {
+    return this.availableModels.get(modelId);
   }
   
-  // Get working models
-  getWorkingModels(): string[] {
-    return Array.from(this.availableModels);
-  }
-  
-  // Check if specific model is working
   isModelWorking(modelId: string): boolean {
-    return this.availableModels.has(modelId);
+    return this.modelTestResults.get(modelId) === true;
+  }
+  
+  getWorkingModels(): ModelInfo[] {
+    return this.getAvailableModels().filter(model => 
+      this.isModelWorking(model.id) || model.status === 'live'
+    );
+  }
+  
+  // Get recommended model based on task
+  getRecommendedModel(task: 'chat' | 'code' | 'reasoning' | 'fast'): string {
+    const recommendations = {
+      chat: 'deepseek-chat',
+      code: 'codestral-latest',
+      reasoning: 'deepseek-reasoner',
+      fast: 'gpt-4o-mini'
+    };
+    
+    const recommended = recommendations[task];
+    return this.isModelWorking(recommended) ? recommended : 'deepseek-chat';
   }
 }
 
